@@ -1,0 +1,240 @@
+<template>
+  <div class="login-container">
+    <div class="login-box">
+      <q-form class="login-content" @submit.prevent="login">
+        <q-input
+          v-model="email"
+          placeholder="E-MAIL..."
+          type="email"
+          outlined
+          dense
+          hide-bottom-space
+          required
+          class="login-input"
+        />
+
+        <q-input
+          v-model="password"
+          placeholder="SENHA..."
+          type="password"
+          outlined
+          dense
+          hide-bottom-space
+          required
+          class="login-input password-input"
+        />
+
+        <div class="login-actions">
+          <button type="button" class="register-button" @click="router.push('/cadastro')">
+            NAO TEM UMA<br />
+            CONTA?
+          </button>
+
+          <q-btn
+            label="LOGIN"
+            class="login-button"
+            unelevated
+            no-caps
+            type="submit"
+            :loading="loading"
+          />
+        </div>
+      </q-form>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { QInput, QBtn, QForm, useQuasar } from 'quasar'
+import { useRouter } from 'vue-router'
+import { api } from '../services/api'
+import { gameSession, updateGameSession } from '../services/gameSession'
+import { saveSession } from '../services/session'
+
+const email = ref('')
+const password = ref('')
+const loading = ref(false)
+const $q = useQuasar()
+const router = useRouter()
+
+async function login() {
+  loading.value = true
+  try {
+    const response = await api.login(email.value.trim(), password.value)
+    if (!response?.token) {
+      throw new Error('A API não retornou um token de acesso.')
+    }
+
+    saveSession(response.token, response.user || null)
+    if (gameSession.choiceID && gameSession.difficulty) {
+      const gameRoutes = {
+        1: '/game/easy',
+        2: '/game/normal',
+        3: '/game/hard',
+      }
+      updateGameSession({ abandonOnRefresh: false })
+      await router.push(gameRoutes[gameSession.difficulty] || '/dificuldade')
+    } else {
+      await router.push('/dificuldade')
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Não foi possível entrar.',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
+</script>
+
+<style scoped>
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.login-box {
+  position: relative;
+
+  width: 583px;
+  height: 508px;
+
+  background-color: #ac7f5e;
+  border: 10px solid #654321;
+  box-sizing: border-box;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  overflow: hidden;
+}
+
+.login-box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+
+  background-image: url('/src/assets/backgrounds/Login/textura-madeira.png');
+  background-size: cover;
+  background-position: center;
+
+  opacity: 80%;
+
+  pointer-events: none;
+}
+
+.login-content {
+  position: relative;
+  z-index: 1;
+
+  width: 70%;
+
+  display: flex;
+  flex-direction: column;
+  gap: 50px;
+}
+
+.login-input {
+  width: 100%;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.login-input :deep(.q-field__control) {
+  background-color: #fff4cf;
+
+  border: 3px solid #695338;
+  border-radius: 14px;
+
+  height: 70px;
+  padding: 0 10px;
+}
+
+.login-input :deep(.q-field__control:before),
+.login-input :deep(.q-field__control:after) {
+  display: none;
+}
+
+.login-input :deep(.q-field__native) {
+  font-size: 30px;
+  font-weight: bold;
+
+  color: #8c8265;
+}
+
+.login-input :deep(.q-field__native::placeholder) {
+  color: #9b947c;
+  opacity: 1;
+}
+
+.password-input :deep(.q-field__native) {
+  font-family: Arial, sans-serif !important;
+  letter-spacing: 3px;
+  color: #8c8265;
+}
+
+.password-input :deep(.q-field__native::placeholder) {
+  font-family: 'The Inquisition', serif !important;
+  letter-spacing: normal;
+  color: #9b947c;
+  opacity: 1;
+}
+
+.login-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 30px;
+  margin-top: 10px;
+}
+
+.register-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+
+  font-size: 22px;
+  font-weight: bold;
+
+  color: #594632;
+
+  cursor: pointer;
+  text-align: center;
+}
+
+.login-button {
+  flex: 1;
+  height: 68px;
+
+  background-color: #747b4d;
+  border: 3px solid #4e5034;
+  border-radius: 14px;
+
+  color: white;
+
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.login-button:hover {
+  background-color: #858c59;
+}
+
+@media (max-width: 450px) {
+  .login-box {
+    width: 92%;
+    height: 320px;
+  }
+
+  .login-content {
+    width: 78%;
+  }
+}
+</style>
